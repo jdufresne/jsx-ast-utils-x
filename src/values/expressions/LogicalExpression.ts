@@ -1,3 +1,7 @@
+import type { LogicalExpression } from 'estree';
+
+import type { ExtractedValue } from '../types';
+
 import getValue from '.';
 
 /**
@@ -8,7 +12,9 @@ import getValue from '.';
  * @param value Value - AST Value object with type `LogicalExpression`
  * @returns - The extracted value converted to correct type.
  */
-export default function extractValueFromLogicalExpression(value) {
+export default function extractValueFromLogicalExpression(
+  value: LogicalExpression,
+): ExtractedValue {
   const { operator, left, right } = value;
   const leftVal = getValue(left);
   const rightVal = getValue(right);

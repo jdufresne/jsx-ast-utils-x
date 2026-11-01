@@ -1,1 +1,1 @@
-module.exports = require('./lib').getProp;
+export { default } from './src/getProp';

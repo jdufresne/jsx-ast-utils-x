@@ -1,11 +1,62 @@
+import type {
+  Expression,
+  MemberExpression,
+  PrivateIdentifier,
+  Super,
+} from 'estree';
+
+import stringifyExtractedValue from '../stringifyExtractedValue';
+import type { ExtractedValue } from '../types';
+
 import extractValueFromCallExpression from './CallExpression';
 import extractValueFromThisExpression from './ThisExpression';
 
-function navigate(obj, prop, value) {
+interface Parenthesizable {
+  extra?: {
+    parenthesized?: boolean;
+  };
+}
+
+interface TSAsExpression {
+  type: 'TSAsExpression';
+  expression: TSExpression;
+}
+
+interface TSNonNullExpression extends Parenthesizable {
+  type: 'TSNonNullExpression';
+  expression: TSExpression;
+}
+
+// Any node reached while walking a `TSNonNullExpression` for an unrecognized
+// shape (see the fallback at the end of the extractor).
+interface WrappedNode {
+  type: string;
+  name: string;
+  expression?: WrappedNode;
+}
+
+type TSExpression =
+  | Exclude<Expression, MemberExpression>
+  | PrivateIdentifier
+  | Super
+  | TSAsExpression
+  | TSNonNullExpression
+  | (MemberExpression & Parenthesizable);
+
+function navigate(
+  obj: ExtractedValue,
+  prop: ExtractedValue,
+  value: MemberExpression,
+): string {
+  const object = stringifyExtractedValue(obj);
+  const property = stringifyExtractedValue(prop);
+
   if (value.computed) {
-    return value.optional ? `${obj}?.[${prop}]` : `${obj}[${prop}]`;
+    return value.optional
+      ? `${object}?.[${property}]`
+      : `${object}[${property}]`;
   }
-  return value.optional ? `${obj}?.${prop}` : `${obj}.${prop}`;
+  return value.optional ? `${object}?.${property}` : `${object}.${property}`;
 }
 
 /**
@@ -17,7 +68,9 @@ function navigate(obj, prop, value) {
  *   `obj.property` convention.
  */
 // eslint-disable-next-line sonarjs/cognitive-complexity
-export default function extractValueFromTSNonNullExpression(value) {
+export default function extractValueFromTSNonNullExpression(
+  value: TSExpression,
+): ExtractedValue {
   const errorMessage =
     'The prop value with an expression type of TSNonNullExpression could not be resolved. Please file an issue ( https://github.com/jsx-eslint/jsx-ast-utils/issues/new ) to get this fixed immediately.';
 
@@ -49,7 +102,7 @@ export default function extractValueFromTSNonNullExpression(value) {
     (!value.extra || value.extra.parenthesized === false)
   ) {
     const { expression } = value;
-    return `${extractValueFromTSNonNullExpression(expression)}${'!'}`;
+    return `${stringifyExtractedValue(extractValueFromTSNonNullExpression(expression))}!`;
   }
 
   // does not contains properties & is parenthesized
@@ -59,7 +112,7 @@ export default function extractValueFromTSNonNullExpression(value) {
     value.extra.parenthesized === true
   ) {
     const { expression } = value;
-    return `${'('}${extractValueFromTSNonNullExpression(expression)}${'!'}${')'}`;
+    return `(${stringifyExtractedValue(extractValueFromTSNonNullExpression(expression))}!)`;
   }
 
   if (value.type === 'MemberExpression') {
@@ -73,7 +126,7 @@ export default function extractValueFromTSNonNullExpression(value) {
     }
 
     // contains a property & is parenthesized
-    if (value.extra && value.extra.parenthesized === true) {
+    if (value.extra.parenthesized === true) {
       const result = navigate(
         extractValueFromTSNonNullExpression(value.object),
         extractValueFromTSNonNullExpression(value.property),
@@ -85,8 +138,9 @@ export default function extractValueFromTSNonNullExpression(value) {
 
   // try to fail silently, if specs for TSNonNullExpression change
   // not throw, only log error. Similar to how it was done previously
-  if (value.expression) {
-    let { expression } = value;
+  const { expression: wrapped } = value as { expression?: WrappedNode };
+  if (wrapped) {
+    let expression: WrappedNode | undefined = wrapped;
     while (expression) {
       if (expression.type === 'Identifier') {
         console.error(errorMessage);

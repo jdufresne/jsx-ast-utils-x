@@ -1,3 +1,7 @@
+import type { ChainElement, ChainExpression } from 'estree';
+
+import type { ExtractedValue } from '../types';
+
 import getValue from '.';
 
 /**
@@ -8,6 +12,10 @@ import getValue from '.';
  * @returns - The extracted value converted to correct type and maintaining
  *   `obj?.property` convention.
  */
-export default function extractValueFromChainExpression(value) {
-  return getValue(value.expression || value);
+export default function extractValueFromChainExpression(
+  value: ChainElement | ChainExpression,
+): ExtractedValue {
+  const expression =
+    value.type === 'ChainExpression' ? value.expression : undefined;
+  return getValue(expression || value);
 }

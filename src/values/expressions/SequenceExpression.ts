@@ -1,3 +1,7 @@
+import type { SequenceExpression } from 'estree';
+
+import type { ExtractedValue } from '../types';
+
 import getValue from '.';
 
 /**
@@ -8,6 +12,8 @@ import getValue from '.';
  * @param value
  * @returns - An array of the extracted elements.
  */
-export default function extractValueFromSequenceExpression(value) {
+export default function extractValueFromSequenceExpression(
+  value: SequenceExpression,
+): ExtractedValue[] {
   return value.expressions.map(element => getValue(element));
 }

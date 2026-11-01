@@ -1,3 +1,5 @@
+import type { UnaryExpression } from 'estree';
+
 import getValue from '.';
 
 /**
@@ -8,21 +10,23 @@ import getValue from '.';
  * @param value Value - AST Value object with type `UnaryExpression`
  * @returns - The extracted value converted to correct type.
  */
-export default function extractValueFromUnaryExpression(value) {
+export default function extractValueFromUnaryExpression(
+  value: UnaryExpression,
+): bigint | boolean | number | undefined {
   const { operator, argument } = value;
 
   switch (operator) {
     case '-': {
-      return -getValue(argument);
+      return -(getValue(argument) as number);
     }
     case '+': {
-      return +getValue(argument);
+      return +(getValue(argument) as number);
     }
     case '!': {
       return !getValue(argument);
     }
     case '~': {
-      return ~getValue(argument);
+      return ~(getValue(argument) as number);
     }
     case 'delete': {
       // I believe delete statements evaluate to true.

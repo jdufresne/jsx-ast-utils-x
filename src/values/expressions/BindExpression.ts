@@ -1,3 +1,7 @@
+import type { BindExpression, MemberExpression } from '@babel/types';
+
+import stringifyExtractedValue from '../stringifyExtractedValue';
+
 import getValue from '.';
 
 /**
@@ -9,19 +13,22 @@ import getValue from '.';
  * @param value Value - AST Value object with type `BindExpression`
  * @returns - The extracted value converted to correct type.
  */
-export default function extractValueFromBindExpression(value) {
+export default function extractValueFromBindExpression(
+  value: BindExpression,
+): string {
   const callee = getValue(value.callee);
 
   // If value.object === null, the callee must be a MemberExpression.
   // https://github.com/babel/babylon/blob/master/ast/spec.md#bindexpression
   const object =
     value.object === null
-      ? getValue(value.callee.object)
+      ? getValue((value.callee as MemberExpression).object)
       : getValue(value.object);
 
-  if (value.object && value.object.property) {
-    return `${object}.${callee}.bind(${object})`;
+  // eslint-disable-next-line sonarjs/in-operator-type-error -- object is an AST node here
+  if (value.object && 'property' in value.object) {
+    return `${stringifyExtractedValue(object)}.${stringifyExtractedValue(callee)}.bind(${stringifyExtractedValue(object)})`;
   }
 
-  return `${callee}.bind(${object})`;
+  return `${stringifyExtractedValue(callee)}.bind(${stringifyExtractedValue(object)})`;
 }

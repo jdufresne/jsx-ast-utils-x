@@ -1,8 +1,37 @@
+import type {
+  Expression,
+  Literal,
+  Node,
+  Pattern,
+  Property,
+  SpreadElement,
+} from 'estree';
+import type { JSXAttribute, JSXSpreadAttribute } from 'estree-jsx';
+
 import propName from './propName';
+
+type JSXProp = JSXAttribute | JSXSpreadAttribute;
+
+interface RangedNode {
+  range?: [number, number] | undefined;
+  start?: number | undefined;
+  end?: number | undefined;
+}
+
+interface BaseLocation {
+  start: NonNullable<Node['loc']>['start'];
+  end: NonNullable<Node['loc']>['end'];
+  source?: string | null | undefined;
+  filename?: string | undefined;
+}
 
 const DEFAULT_OPTIONS = {
   ignoreCase: true,
 };
+
+interface GetPropOptions {
+  ignoreCase?: boolean;
+}
 
 /**
  * Returns the JSXAttribute itself or undefined, indicating the prop is not
@@ -12,16 +41,17 @@ const DEFAULT_OPTIONS = {
  * @param prop
  * @param options
  */
+// eslint-disable-next-line sonarjs/function-return-type -- Absence is represented by undefined.
 export default function getProp(
-  props = [],
+  props: JSXProp[] = [],
   prop = '',
-  options = DEFAULT_OPTIONS,
-) {
-  function getName(name) {
+  options: GetPropOptions = DEFAULT_OPTIONS,
+): JSXAttribute | undefined {
+  function getName(name: string): string {
     return options.ignoreCase ? name.toUpperCase() : name;
   }
   const propToFind = getName(prop);
-  function isPropToFind(property) {
+  function isPropToFind(property: Property | SpreadElement): boolean {
     return (
       property.type === 'Property' &&
       property.key.type === 'Identifier' &&
@@ -29,36 +59,57 @@ export default function getProp(
     );
   }
 
-  const foundAttribute = props.find(attribute => {
-    // If the props contain a spread prop, try to find the property in the object expression.
-    if (attribute.type === 'JSXSpreadAttribute') {
-      return (
-        attribute.argument.type === 'ObjectExpression' &&
-        propToFind !== getName('key') && // https://github.com/reactjs/rfcs/pull/107
-        attribute.argument.properties.some(isPropToFind)
-      );
-    }
+  const foundAttribute = props.find(
+    (attribute: JSXAttribute | JSXSpreadAttribute): boolean => {
+      // If the props contain a spread prop, try to find the property in the object expression.
+      if (attribute.type === 'JSXSpreadAttribute') {
+        return (
+          attribute.argument.type === 'ObjectExpression' &&
+          propToFind !== getName('key') && // https://github.com/reactjs/rfcs/pull/107
+          attribute.argument.properties.some(isPropToFind)
+        );
+      }
 
-    return propToFind === getName(propName(attribute));
-  });
+      return propToFind === getName(propName(attribute));
+    },
+  );
 
   if (foundAttribute && foundAttribute.type === 'JSXSpreadAttribute') {
-    return propertyToJSXAttribute(
-      foundAttribute.argument.properties.find(isPropToFind),
-    );
+    const argument = foundAttribute.argument;
+
+    if (argument.type !== 'ObjectExpression') {
+      return undefined;
+    }
+
+    const property = argument.properties.find(isPropToFind);
+
+    if (!property || property.type !== 'Property') {
+      return undefined;
+    }
+
+    return propertyToJSXAttribute(property);
   }
 
   return foundAttribute;
 }
 
-function propertyToJSXAttribute(node) {
+function propertyToJSXAttribute(node: Property): JSXAttribute {
+  if (node.key.type !== 'Identifier') {
+    throw new Error('Expected an object property with an identifier key.');
+  }
+
   const { key, value } = node;
+
   return {
     type: 'JSXAttribute',
-    name: { type: 'JSXIdentifier', name: key.name, ...getBaseProps(key) },
+    name: {
+      type: 'JSXIdentifier',
+      name: key.name,
+      ...getBaseProps(key),
+    },
     value:
       value.type === 'Literal'
-        ? adjustRangeOfNode(value)
+        ? (adjustRangeOfNode(value) as Literal)
         : {
             type: 'JSXExpressionContainer',
             expression: adjustExpressionRange(value),
@@ -68,35 +119,61 @@ function propertyToJSXAttribute(node) {
   };
 }
 
-function adjustRangeOfNode(node) {
+function adjustRangeOfNode<T extends RangedNode>(
+  node: T,
+): Omit<T, 'end' | 'start'> & {
+  start: undefined;
+  end: undefined;
+  range: [number, number];
+} {
   const [start, end] = node.range || [node.start, node.end];
 
   return {
     ...node,
     end: undefined,
-    range: [start, end],
+    range: [start, end] as [number, number],
     start: undefined,
   };
 }
 
-function adjustExpressionRange({ expressions, quasis, ...expression }) {
-  return {
-    ...adjustRangeOfNode(expression),
-    ...(expressions ? { expressions: expressions.map(adjustRangeOfNode) } : {}),
-    ...(quasis ? { quasis: quasis.map(adjustRangeOfNode) } : {}),
+function adjustExpressionRange(expression: Expression | Pattern): Expression {
+  const { expressions, quasis, ...rest } = expression as Expression & {
+    expressions?: RangedNode[];
+    quasis?: RangedNode[];
   };
+
+  return {
+    ...adjustRangeOfNode(rest as Expression & RangedNode),
+    ...(expressions
+      ? {
+          expressions: expressions.map(item => adjustRangeOfNode(item)),
+        }
+      : {}),
+    ...(quasis
+      ? {
+          quasis: quasis.map(item => adjustRangeOfNode(item)),
+        }
+      : {}),
+  } as Expression;
 }
 
-function getBaseProps({ loc, ...node }) {
-  const { range } = adjustRangeOfNode(node);
+function getBaseProps(node: Node): {
+  loc: BaseLocation | undefined;
+  range: [number, number];
+} {
+  const { loc, ...rest } = node;
+  const { range } = adjustRangeOfNode(rest as RangedNode);
 
   return {
-    loc: getBaseLocation(loc),
+    loc: loc ? getBaseLocation(loc) : undefined,
     range,
   };
 }
 
-function getBaseLocation({ start, end, source, filename }) {
+function getBaseLocation(
+  location: NonNullable<Node['loc']> & { filename?: string },
+): BaseLocation {
+  const { start, end, source, filename } = location;
   return {
     start,
     end,

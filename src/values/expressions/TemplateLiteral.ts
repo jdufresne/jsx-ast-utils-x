@@ -1,5 +1,14 @@
-function sortStarts(a, b) {
-  return (a.range ? a.range[0] : a.start) - (b.range ? b.range[0] : b.start);
+import type { Expression, TemplateElement, TemplateLiteral } from 'estree';
+
+// Parsers provide either `range` or `start` (e.g. Babel) for source positions.
+type TemplatePartition = { start?: number } & (Expression | TemplateElement);
+
+function getStart(node: TemplatePartition): number {
+  return node.range ? node.range[0] : (node.start as number);
+}
+
+function sortStarts(a: TemplatePartition, b: TemplatePartition): number {
+  return getStart(a) - getStart(b);
 }
 
 /**
@@ -11,24 +20,30 @@ function sortStarts(a, b) {
  * should return "undefined".
  *
  * @param value
+ * @returns The extracted template literal value.
  */
-export default function extractValueFromTemplateLiteral(value) {
+export default function extractValueFromTemplateLiteral(
+  value: TemplateLiteral,
+): string {
   const { quasis, expressions } = value;
-  const partitions = quasis.concat(expressions);
+  const partitions: TemplatePartition[] = [...quasis, ...expressions];
+
+  partitions.sort(sortStarts);
 
   return partitions
-    .sort(sortStarts)
-    .map(({ type, value: { raw } = {}, name }) => {
-      if (type === 'TemplateElement') {
-        return raw;
+    .map(partition => {
+      if (partition.type === 'TemplateElement') {
+        return partition.value.raw;
       }
 
-      if (type === 'Identifier') {
-        return name === 'undefined' ? name : `{${name}}`;
+      if (partition.type === 'Identifier') {
+        return partition.name === 'undefined'
+          ? partition.name
+          : `{${partition.name}}`;
       }
 
-      if (type.includes('Expression')) {
-        return `{${type}}`;
+      if (partition.type.includes('Expression')) {
+        return `{${partition.type}}`;
       }
 
       return '';

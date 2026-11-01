@@ -1,3 +1,5 @@
+import type { JSXElement, JSXIdentifier } from 'estree-jsx';
+
 import getValue from '.';
 
 /**
@@ -7,13 +9,13 @@ import getValue from '.';
  *
  * @param value
  */
-export default function extractValueFromJSXElement(value) {
-  const Tag = value.openingElement.name.name;
+export default function extractValueFromJSXElement(value: JSXElement): string {
+  // Only plain identifier names are resolved here, as before.
+  const Tag = (value.openingElement.name as JSXIdentifier).name;
   if (value.openingElement.selfClosing) {
     return `<${Tag} />`;
   }
-  return `<${Tag}>${[value.children]
-    .flat()
-    .map(x => getValue(x))
-    .join('')}</${Tag}>`;
+  const children = [value.children].flat().map(x => getValue(x));
+  // eslint-disable-next-line @typescript-eslint/no-base-to-string -- joining extracted values keeps the original coercion
+  return `<${Tag}>${children.join('')}</${Tag}>`;
 }

@@ -1,3 +1,5 @@
+import type { UpdateExpression } from 'estree';
+
 import getValue from '.';
 
 /**
@@ -8,10 +10,12 @@ import getValue from '.';
  * @param value Value - AST Value object with type `UpdateExpression`
  * @returns - The extracted value converted to correct type.
  */
-export default function extractValueFromUpdateExpression(value) {
+export default function extractValueFromUpdateExpression(
+  value: UpdateExpression,
+): bigint | number | undefined {
   const { operator, argument, prefix } = value;
 
-  let val = getValue(argument);
+  let val = getValue(argument) as number;
 
   switch (operator) {
     case '++': {

@@ -1,4 +1,8 @@
+import type { BinaryExpression } from 'estree';
+
 import getValue from '.';
+
+type BinaryResult = bigint | boolean | number | string | undefined;
 
 /**
  * Extractor function for a BinaryExpression type value node. A binary
@@ -8,10 +12,14 @@ import getValue from '.';
  * @param value Value - AST Value object with type `BinaryExpression`
  * @returns - The extracted value converted to correct type.
  */
-export default function extractValueFromBinaryExpression(value) {
+export default function extractValueFromBinaryExpression(
+  value: BinaryExpression,
+): BinaryResult {
   const { operator, left, right } = value;
   const leftVal = getValue(left);
   const rightVal = getValue(right);
+  const leftNum = leftVal as number;
+  const rightNum = rightVal as number;
 
   switch (operator) {
     case '==': {
@@ -27,53 +35,53 @@ export default function extractValueFromBinaryExpression(value) {
       return leftVal !== rightVal;
     }
     case '<': {
-      return leftVal < rightVal;
+      return leftNum < rightNum;
     }
     case '<=': {
-      return leftVal <= rightVal;
+      return leftNum <= rightNum;
     }
     case '>': {
-      return leftVal > rightVal;
+      return leftNum > rightNum;
     }
     case '>=': {
-      return leftVal >= rightVal;
+      return leftNum >= rightNum;
     }
     case '<<': {
-      return leftVal << rightVal;
+      return leftNum << rightNum;
     }
     case '>>': {
-      return leftVal >> rightVal;
+      return leftNum >> rightNum;
     }
     case '>>>': {
-      return leftVal >>> rightVal;
+      return leftNum >>> rightNum;
     }
     case '+': {
-      return leftVal + rightVal;
+      return leftNum + rightNum;
     }
     case '-': {
-      return leftVal - rightVal;
+      return leftNum - rightNum;
     }
     case '*': {
-      return leftVal * rightVal;
+      return leftNum * rightNum;
     }
     case '/': {
-      return leftVal / rightVal;
+      return leftNum / rightNum;
     }
     case '%': {
-      return leftVal % rightVal;
+      return leftNum % rightNum;
     }
     case '|': {
-      return leftVal | rightVal;
+      return leftNum | rightNum;
     }
     case '^': {
-      return leftVal ^ rightVal;
+      return leftNum ^ rightNum;
     }
     case '&': {
-      return leftVal & rightVal;
+      return leftNum & rightNum;
     }
     case 'in': {
       try {
-        return leftVal in rightVal;
+        return (leftVal as string) in (rightVal as object);
       } catch {
         return false;
       }
@@ -82,7 +90,7 @@ export default function extractValueFromBinaryExpression(value) {
       if (typeof rightVal !== 'function') {
         return false;
       }
-      return leftVal instanceof rightVal;
+      return (leftVal as object) instanceof rightVal;
     }
     default: {
       return;

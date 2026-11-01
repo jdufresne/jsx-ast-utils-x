@@ -1,23 +1,32 @@
-import JSXElement from './JSXElement';
-import JSXFragment from './JSXFragment';
-import JSXText from './JSXText';
-import Literal from './Literal';
-import JSXExpressionContainer, { extractLiteral } from './expressions';
+import type { JSXAttribute, JSXElement as JSXElementNode } from 'estree-jsx';
+
+import extractValueFromJSXElement from './JSXElement';
+import extractValueFromJSXFragment from './JSXFragment';
+import extractValueFromJSXText from './JSXText';
+import extractValueFromLiteral from './Literal';
+import extract, { extractLiteral } from './expressions';
+import type { ExtractedValue } from './types';
+
+type JSXAttributeValue = Exclude<JSXAttribute['value'], null>;
+
+type JSXChild = JSXElementNode['children'][number];
+
+type ValueExtractor = (value: JSXAttributeValue | JSXChild) => ExtractedValue;
 
 // Composition map of types to their extractor functions.
-const TYPES = {
-  Literal,
-  JSXElement,
-  JSXExpressionContainer,
-  JSXText,
-  JSXFragment,
+const TYPES: Partial<Record<string, ValueExtractor>> = {
+  Literal: extractValueFromLiteral as unknown as ValueExtractor,
+  JSXElement: extractValueFromJSXElement as unknown as ValueExtractor,
+  JSXExpressionContainer: extract as unknown as ValueExtractor,
+  JSXText: extractValueFromJSXText as unknown as ValueExtractor,
+  JSXFragment: extractValueFromJSXFragment as unknown as ValueExtractor,
 };
 
 // Composition map of types to their extractor functions to handle literals.
-const LITERAL_TYPES = {
+const LITERAL_TYPES: Partial<Record<string, ValueExtractor>> = {
   ...TYPES,
   JSXElement: () => null,
-  JSXExpressionContainer: extractLiteral,
+  JSXExpressionContainer: extractLiteral as unknown as ValueExtractor,
 };
 
 /**
@@ -28,11 +37,18 @@ const LITERAL_TYPES = {
  *
  * @param value - AST Value object on a JSX Attribute.
  */
-export default function getValue(value) {
-  if (!TYPES[value.type]) {
+// eslint-disable-next-line sonarjs/function-return-type
+export default function getValue(
+  value: JSXAttributeValue | JSXChild,
+): ExtractedValue {
+  const extractor = TYPES[value.type];
+
+  if (!extractor) {
     console.log(value.type);
+    throw new TypeError(`Cannot extract a value of type ${value.type}`);
   }
-  return TYPES[value.type](value);
+
+  return extractor(value);
 }
 
 /**
@@ -43,6 +59,13 @@ export default function getValue(value) {
  *
  * @param value - AST Value object on a JSX Attribute.
  */
-export function getLiteralValue(value) {
-  return LITERAL_TYPES[value.type](value);
+// eslint-disable-next-line sonarjs/function-return-type
+export function getLiteralValue(value: JSXAttributeValue): ExtractedValue {
+  const extractor = LITERAL_TYPES[value.type];
+
+  if (!extractor) {
+    throw new TypeError(`Cannot extract a value of type ${value.type}`);
+  }
+
+  return extractor(value);
 }

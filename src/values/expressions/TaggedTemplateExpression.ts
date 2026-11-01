@@ -1,3 +1,5 @@
+import type { TaggedTemplateExpression } from 'estree';
+
 import extractValueFromTemplateLiteral from './TemplateLiteral';
 
 /**
@@ -6,6 +8,8 @@ import extractValueFromTemplateLiteral from './TemplateLiteral';
  *
  * @param value
  */
-export default function extractValueFromTaggedTemplateExpression(value) {
+export default function extractValueFromTaggedTemplateExpression(
+  value: TaggedTemplateExpression,
+): string {
   return extractValueFromTemplateLiteral(value.quasi);
 }

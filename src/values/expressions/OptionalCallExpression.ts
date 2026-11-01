@@ -1,3 +1,7 @@
+import type { CallExpression } from 'estree';
+
+import stringifyExtractedValue from '../stringifyExtractedValue';
+
 import getValue from '.';
 
 /**
@@ -9,6 +13,10 @@ import getValue from '.';
  * @returns - The extracted value converted to correct type and maintaining
  *   `obj.property?.()` convention.
  */
-export default function extractValueFromOptionalCallExpression(value) {
-  return `${getValue(value.callee)}?.(${value.arguments.map(x => getValue(x)).join(', ')})`;
+export default function extractValueFromOptionalCallExpression(
+  value: CallExpression,
+): string {
+  const args = value.arguments.map(x => getValue(x));
+  // eslint-disable-next-line @typescript-eslint/no-base-to-string -- keeps the original join coercion
+  return `${stringifyExtractedValue(getValue(value.callee))}?.(${args.join(', ')})`;
 }

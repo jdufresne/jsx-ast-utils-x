@@ -1,3 +1,7 @@
+import type { AssignmentExpression } from 'estree';
+
+import stringifyExtractedValue from '../stringifyExtractedValue';
+
 import getValue from '.';
 
 /**
@@ -8,6 +12,8 @@ import getValue from '.';
  * @param value Value - AST Value object with type `AssignmentExpression`
  * @returns - The extracted value converted to correct type.
  */
-export default function extractValueFromAssignmentExpression(value) {
-  return `${getValue(value.left)} ${value.operator} ${getValue(value.right)}`;
+export default function extractValueFromAssignmentExpression(
+  value: AssignmentExpression,
+): string {
+  return `${stringifyExtractedValue(getValue(value.left))} ${value.operator} ${stringifyExtractedValue(getValue(value.right))}`;
 }

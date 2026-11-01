@@ -1,17 +1,33 @@
+import type { JSXAttribute } from 'estree-jsx';
+
 import getValue, { getLiteralValue } from './values';
+import type { ExtractedValue } from './values/types';
 
-const extractValue = (attribute, extractor) => {
-  if (attribute && attribute.type === 'JSXAttribute') {
-    if (attribute.value === null) {
-      // Null valued attributes imply truthiness.
-      // For example: <div aria-hidden />
-      // See: https://facebook.github.io/react/docs/jsx-in-depth.html#boolean-attributes
-      return true;
-    }
-
-    return extractor(attribute.value);
+// eslint-disable-next-line sonarjs/function-return-type
+function extractValue(
+  attribute: unknown,
+  extractor: (value: Exclude<JSXAttribute['value'], null>) => ExtractedValue,
+): ExtractedValue {
+  if (
+    typeof attribute !== 'object' ||
+    attribute === null ||
+    !('type' in attribute) ||
+    attribute.type !== 'JSXAttribute'
+  ) {
+    return undefined;
   }
-};
+
+  const jsxAttribute = attribute as JSXAttribute;
+
+  if (jsxAttribute.value === null) {
+    // Null valued attributes imply truthiness.
+    // For example: <div aria-hidden />
+    // See: https://facebook.github.io/react/docs/jsx-in-depth.html#boolean-attributes
+    return true;
+  }
+
+  return extractor(jsxAttribute.value);
+}
 
 /**
  * Returns the value of a given attribute. Different types of attributes have
@@ -22,7 +38,8 @@ const extractValue = (attribute, extractor) => {
  *
  * @param attribute - The JSXAttribute collected by AST parser.
  */
-export default function getPropValue(attribute) {
+// eslint-disable-next-line sonarjs/function-return-type
+export default function getPropValue(attribute: unknown): ExtractedValue {
   return extractValue(attribute, getValue);
 }
 
@@ -36,6 +53,7 @@ export default function getPropValue(attribute) {
  *
  * @param attribute - The JSXAttribute collected by AST parser.
  */
-export function getLiteralPropValue(attribute) {
+// eslint-disable-next-line sonarjs/function-return-type
+export function getLiteralPropValue(attribute: unknown): ExtractedValue {
   return extractValue(attribute, getLiteralValue);
 }

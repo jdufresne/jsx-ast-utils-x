@@ -1,3 +1,7 @@
+import type { MemberExpression } from 'estree';
+
+import stringifyExtractedValue from '../stringifyExtractedValue';
+
 import getValue from '.';
 
 /**
@@ -8,6 +12,8 @@ import getValue from '.';
  * @returns - The extracted value converted to correct type and maintaining
  *   `obj.property` convention.
  */
-export default function extractValueFromMemberExpression(value) {
-  return `${getValue(value.object)}${value.optional ? '?.' : '.'}${getValue(value.property)}`;
+export default function extractValueFromMemberExpression(
+  value: MemberExpression,
+): string {
+  return `${stringifyExtractedValue(getValue(value.object))}${value.optional ? '?.' : '.'}${stringifyExtractedValue(getValue(value.property))}`;
 }

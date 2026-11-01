@@ -1,9 +1,18 @@
+import type { JSXAttribute, JSXSpreadAttribute } from 'estree-jsx';
+
 import propName from './propName';
 
 const DEFAULT_OPTIONS = {
   spreadStrict: true,
   ignoreCase: true,
 };
+
+type Prop = JSXAttribute | JSXSpreadAttribute;
+
+interface HasPropOptions {
+  spreadStrict?: boolean;
+  ignoreCase?: boolean;
+}
 
 /**
  * Returns boolean indicating whether an prop exists on the props property of a
@@ -14,13 +23,13 @@ const DEFAULT_OPTIONS = {
  * @param options
  */
 export default function hasProp(
-  props = [],
+  props: Prop[] = [],
   prop = '',
-  options = DEFAULT_OPTIONS,
-) {
+  options: HasPropOptions = DEFAULT_OPTIONS,
+): boolean {
   const propToCheck = options.ignoreCase ? prop.toUpperCase() : prop;
 
-  return props.some(attribute => {
+  return props.some((attribute: Prop) => {
     // If the props contain a spread prop, then refer to strict param.
     if (attribute.type === 'JSXSpreadAttribute') {
       return !options.spreadStrict;
@@ -43,10 +52,10 @@ export default function hasProp(
  * @param options
  */
 export function hasAnyProp(
-  nodeProps = [],
-  props = [],
-  options = DEFAULT_OPTIONS,
-) {
+  nodeProps: Prop[] = [],
+  props: string[] | string = [],
+  options: HasPropOptions = DEFAULT_OPTIONS,
+): boolean {
   const propsToCheck = typeof props === 'string' ? props.split(' ') : props;
 
   return propsToCheck.some(prop => hasProp(nodeProps, prop, options));
@@ -61,10 +70,10 @@ export function hasAnyProp(
  * @param options
  */
 export function hasEveryProp(
-  nodeProps = [],
-  props = [],
-  options = DEFAULT_OPTIONS,
-) {
+  nodeProps: Prop[] = [],
+  props: string[] | string = [],
+  options: HasPropOptions = DEFAULT_OPTIONS,
+): boolean {
   const propsToCheck = typeof props === 'string' ? props.split(' ') : props;
 
   return propsToCheck.every(prop => hasProp(nodeProps, prop, options));

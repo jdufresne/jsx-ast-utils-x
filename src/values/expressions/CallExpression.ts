@@ -1,3 +1,7 @@
+import type { SimpleCallExpression } from 'estree';
+
+import stringifyExtractedValue from '../stringifyExtractedValue';
+
 import getValue from '.';
 
 /**
@@ -9,9 +13,12 @@ import getValue from '.';
  * @param value Value - AST Value object with type `CallExpression`
  * @returns - The extracted value converted to correct type.
  */
-export default function extractValueFromCallExpression(value) {
+export default function extractValueFromCallExpression(
+  value: SimpleCallExpression,
+): string {
   const args = Array.isArray(value.arguments)
-    ? value.arguments.map(x => getValue(x)).join(', ')
+    ? // eslint-disable-next-line @typescript-eslint/no-base-to-string -- keeps the original join coercion
+      value.arguments.map(x => getValue(x)).join(', ')
     : '';
-  return `${getValue(value.callee)}${value.optional ? '?.' : ''}(${args})`;
+  return `${stringifyExtractedValue(getValue(value.callee))}${value.optional ? '?.' : ''}(${args})`;
 }

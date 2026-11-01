@@ -27,10 +27,6 @@ export default function extractValueFromUnaryExpression(value) {
       // I believe delete statements evaluate to true.
       return true;
     }
-    // eslint-disable-next-line unicorn-x/no-useless-switch-case
-    case 'typeof':
-    // eslint-disable-next-line unicorn-x/no-useless-switch-case, no-fallthrough
-    case 'void':
     default: {
       return;
     }

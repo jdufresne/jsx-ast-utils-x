@@ -7,10 +7,7 @@
  */
 export default function extractValueFromArrayExpression(value) {
   const getValue = require('.').default;
-  return value.elements.map(element => {
-    if (element === null) {
-      return;
-    }
-    return getValue(element);
-  });
+  return value.elements.map(element =>
+    element === null ? undefined : getValue(element),
+  );
 }
